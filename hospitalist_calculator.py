@@ -443,9 +443,9 @@ with col_results:
 |--------|-------|
 | Status FTE | {status_fte:.2f} |
 | Hospitalist FTE | {result.hospitalist_fte:.2f} |
+| Other Dept FTE | {other_dept_fte_total:.2f} |
 | Clinical FTE | {result.clinical_fte:.2f} |
 | Shift Equivalents | {result.shift_equivalents:.0f} |
-| Other Dept FTE | {other_dept_fte_total:.2f} |
 | Calendar Days | {total_calendar_days} |
         """)
 
