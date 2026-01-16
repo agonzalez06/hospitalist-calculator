@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv/
+venv/
+.DS_Store
+*.log
+
+# Local analysis/validation scripts
+explore_*.py
+analyze_*.py
+validate_*.py
+deep_analysis.py
