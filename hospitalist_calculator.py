@@ -320,7 +320,11 @@ with col_input:
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Other Stipend ($)</p>', unsafe_allow_html=True)
-    other_stipend = c2.number_input("Other Stipend", min_value=0, max_value=200000, value=0, step=1000, label_visibility="collapsed")
+    stipend_input = c2.text_input("Other Stipend", value="0", label_visibility="collapsed")
+    try:
+        other_stipend = float(stipend_input.replace(",", "").replace("$", ""))
+    except ValueError:
+        other_stipend = 0
 
     st.markdown("### Shift Mix (Calendar Days)")
 
