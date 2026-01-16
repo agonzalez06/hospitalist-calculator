@@ -383,7 +383,7 @@ Addiction Board Bonus: $20,000
 
     # Calculate Direct Care Days
     actual_hm_fte = max(0, status_fte - non_clinical_fte - other_dept_fte - addiction_fte_calc)
-    target_shift_eq = int(actual_hm_fte * BASE_SHIFT_EQUIVALENTS)
+    target_shift_eq = int(actual_hm_fte * BASE_SHIFT_EQUIVALENTS + 0.5)
 
     other_shifts = (
         shift_days["Teaching"] * SHIFT_TYPES["Teaching"]["ratio"] +
