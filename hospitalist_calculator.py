@@ -437,6 +437,7 @@ with col_results:
     with right_col:
         st.markdown("### FTE Summary")
         total_calendar_days = sum(v for k, v in shift_days.items() if k != "Addiction") + shift_days.get("Addiction", 0)
+        other_dept_fte_total = result.addiction_fte + other_dept_fte
         st.markdown(f"""
 | Metric | Value |
 |--------|-------|
@@ -444,7 +445,7 @@ with col_results:
 | Hospitalist FTE | {result.hospitalist_fte:.2f} |
 | Clinical FTE | {result.clinical_fte:.2f} |
 | Shift Equivalents | {result.shift_equivalents:.0f} |
-| Addiction FTE | {result.addiction_fte:.2f} |
+| Other Dept FTE | {other_dept_fte_total:.2f} |
 | Calendar Days | {total_calendar_days} |
         """)
 
