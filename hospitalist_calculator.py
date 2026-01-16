@@ -270,7 +270,7 @@ st.markdown("""
 
 st.title("Hospitalist Compensation Calculator")
 st.markdown("**FY 27** (July 1, 2026 - June 30, 2027)")
-st.markdown("*Estimates only. Final numbers confirmed when schedule is published.*")
+st.markdown('<span style="color: red; font-weight: bold;">ESTIMATE ONLY</span> - Final numbers confirmed when schedule is published.', unsafe_allow_html=True)
 st.markdown("---")
 
 col_input, col_results = st.columns([1, 1])
