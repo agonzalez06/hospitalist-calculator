@@ -286,7 +286,14 @@ with col_input:
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Start Date</p>', unsafe_allow_html=True)
-    start_date = c2.date_input("Start Date", value=FISCAL_YEAR_START, min_value=date(2020, 1, 1), max_value=date(2030, 12, 31), format="MM/DD/YYYY", label_visibility="collapsed")
+    started_before_fy = c2.checkbox("On or before 7/1/26", value=True, label_visibility="visible")
+
+    if started_before_fy:
+        start_date = FISCAL_YEAR_START
+    else:
+        _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
+        c1.markdown('<p class="row-label"></p>', unsafe_allow_html=True)
+        start_date = c2.date_input("Start Date", value=date(2026, 8, 1), min_value=date(2026, 7, 2), max_value=FISCAL_YEAR_END, format="MM/DD/YYYY", label_visibility="collapsed")
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Leave Days</p>', unsafe_allow_html=True)
