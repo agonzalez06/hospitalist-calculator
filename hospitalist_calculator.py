@@ -478,7 +478,6 @@ with col_results:
     st.markdown("### B Component (Strength of Schedule)")
 
     if result.shift_breakdown:
-        st.markdown("**Shift Breakdown:**")
         breakdown_md = "| Shift Type | Days | Shift Eq | SoS Value |\n|------------|------|----------|----------|\n"
         total_days = 0
         total_shift_eq = 0
