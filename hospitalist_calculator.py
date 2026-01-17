@@ -173,7 +173,7 @@ def calculate_compensation(
     # B formula: (SoS_Base × SOS + Experience) × HM_FTE - 105000 × Status_FTE
     # This is ANNUAL - time_fraction already affected shift_equivalents which affects SoS
     b_with_experience = b_adjusted + experience_adjustment
-    b_fte_adjusted = round((b_with_experience * hm_fte - A_BASE_FOR_B_CALC * status_fte) / 100) * 100
+    b_fte_adjusted = max(0, round((b_with_experience * hm_fte - A_BASE_FOR_B_CALC * status_fte) / 100) * 100)
 
     # Other Dept Comp: Addiction FTE × $240k + Other FTE × $240k
     other_dept_comp = round((addiction_fte + other_dept_fte) * OTHER_DEPT_RATE * time_fraction / 100) * 100
@@ -473,10 +473,10 @@ with col_results:
         total_shift_eq = 0
         for shift_type, data in result.shift_breakdown.items():
             if data["days"] > 0:
-                breakdown_md += f"| {shift_type} | {data['days']} | {data['shift_eq']:.1f} | {data['sos_value']:.2f} |\n"
+                breakdown_md += f"| {shift_type} | {data['days']} | {int(data['shift_eq'] + 0.5)} | {data['sos_value']:.2f} |\n"
                 total_days += data["days"]
                 total_shift_eq += data["shift_eq"]
-        breakdown_md += f"| **Total** | **{total_days}** | **{total_shift_eq:.1f}** | **{result.total_sos_value:.2f}** |"
+        breakdown_md += f"| **Total** | **{total_days}** | **{int(total_shift_eq + 0.5)}** | **{result.total_sos_value:.2f}** |"
         st.markdown(breakdown_md)
 
     st.markdown(f"""
