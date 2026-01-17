@@ -175,8 +175,9 @@ def calculate_compensation(
     b_with_experience = b_adjusted + experience_adjustment
     b_fte_adjusted = max(0, round((b_with_experience * hm_fte - A_BASE_FOR_B_CALC * status_fte) / 100) * 100)
 
-    # Other Dept Comp: Addiction FTE × $240k + Other FTE × $240k
-    other_dept_comp = round((addiction_fte + other_dept_fte) * OTHER_DEPT_RATE * time_fraction / 100) * 100
+    # Other Dept Comp: The $240k rate INCLUDES the A base, so we only add the premium above A
+    # For 100% other dept: A = $105k, Other Dept Comp = $135k, Total = $240k
+    other_dept_comp = round((addiction_fte + other_dept_fte) * (OTHER_DEPT_RATE - A_BASE_FOR_B_CALC) * time_fraction / 100) * 100
 
     # Addiction Board Bonus
     addiction_board_bonus_val = ADDICTION_BOARD_BONUS * status_fte * time_fraction if addiction_board_certified else 0
