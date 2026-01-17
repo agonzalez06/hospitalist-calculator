@@ -411,6 +411,12 @@ Addiction Board Bonus: $20,000
         c1.markdown('<p class="row-label">Direct Care Days</p>', unsafe_allow_html=True)
         c2.markdown(f"**{direct_care_days}** *(auto)*")
 
+    # Validation warning if shifts exceed FTE capacity
+    total_entered_shifts = other_shifts + shift_days.get("Addiction", 0)
+    if other_shifts > target_shift_eq:
+        excess_shifts = int(other_shifts - target_shift_eq + 0.5)
+        st.warning(f"⚠️ Shifts exceed FTE capacity by {excess_shifts} shift equivalents. Reduce shifts or increase Hospitalist FTE.")
+
 # =============================================================================
 # RESULTS
 # =============================================================================
