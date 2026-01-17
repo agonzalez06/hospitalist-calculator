@@ -381,7 +381,9 @@ Addiction Board Bonus: $20,000
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Clinic</p>', unsafe_allow_html=True)
-    shift_days["Clinic"] = c2.number_input("Clinic", min_value=0, max_value=365, value=0, label_visibility="collapsed")
+    clinic_options = {f"{w} week{'s' if w != 1 else ''} ({w * 5} days)": w * 5 for w in range(0, 53)}
+    clinic_selection = c2.selectbox("Clinic", options=list(clinic_options.keys()), index=0, label_visibility="collapsed")
+    shift_days["Clinic"] = clinic_options[clinic_selection]
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Addiction Medicine</p>', unsafe_allow_html=True)
