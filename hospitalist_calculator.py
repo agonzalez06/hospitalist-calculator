@@ -157,12 +157,11 @@ def calculate_compensation(
     # SoS multiplier
     sos_multiplier = total_sos_value / shift_equivalents if shift_equivalents > 0 else 1.0
 
-    # A Component - ANNUAL (not prorated by time)
-    # Time fraction affects shift equivalents/SoS but A is annual amount
+    # A Component - prorated by time fraction
     a_component = A_COMPONENT_BY_RANK.get(academic_rank, 105000)
-    a_fte_adjusted = a_component * status_fte
+    a_fte_adjusted = a_component * status_fte * time_fraction
 
-    # B Component - ANNUAL (not prorated by time)
+    # B Component - prorated by time fraction
     b_base = STRENGTH_OF_SCHEDULE_BASE
     b_adjusted = b_base * sos_multiplier
 
@@ -171,10 +170,10 @@ def calculate_compensation(
     experience_adjustment = experience_years * EXPERIENCE_ADJUSTMENT_PER_YEAR
 
     # B formula: (SoS_Base × SOS + Experience) × HM_FTE - 105000 × Status_FTE
-    # This is ANNUAL - time_fraction already affected shift_equivalents which affects SoS
+    # Prorated by time_fraction for partial year employees
     b_with_experience = b_adjusted + experience_adjustment
     # B can be negative when Other Dept FTE is high - this offsets A to get correct total
-    b_fte_adjusted = round((b_with_experience * hm_fte - A_BASE_FOR_B_CALC * status_fte) / 100) * 100
+    b_fte_adjusted = round((b_with_experience * hm_fte - A_BASE_FOR_B_CALC * status_fte) * time_fraction / 100) * 100
 
     # Other Dept Comp: Full $240k rate - the negative B offsets A to get correct total
     # For 100% other dept: A=$105k + B=-$105k + Other=$240k = $240k total
