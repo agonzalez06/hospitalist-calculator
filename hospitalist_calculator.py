@@ -391,9 +391,19 @@ Addiction Board Bonus: $20,000
     # Calculate Addiction FTE for display
     addiction_fte_calc = shift_days["Addiction"] / BASE_SHIFT_EQUIVALENTS
 
-    # Calculate Direct Care Days
+    # Calculate time fraction for UI (same logic as in calculate_compensation)
+    if start_date <= FISCAL_YEAR_START:
+        ui_days_in_fy = TOTAL_FY_DAYS
+    elif start_date > FISCAL_YEAR_END:
+        ui_days_in_fy = 0
+    else:
+        ui_days_in_fy = (FISCAL_YEAR_END - start_date).days + 1
+    ui_effective_days = max(0, ui_days_in_fy - leave_days)
+    ui_time_fraction = ui_effective_days / TOTAL_FY_DAYS
+
+    # Calculate Direct Care Days (prorated by time fraction)
     actual_hm_fte = max(0, status_fte - non_clinical_fte - other_dept_fte - addiction_fte_calc)
-    target_shift_eq = int(actual_hm_fte * BASE_SHIFT_EQUIVALENTS + 0.5)
+    target_shift_eq = int(actual_hm_fte * BASE_SHIFT_EQUIVALENTS * ui_time_fraction + 0.5)
 
     other_shifts = (
         shift_days["Teaching"] * SHIFT_TYPES["Teaching"]["ratio"] +
@@ -458,10 +468,12 @@ with col_results:
         st.markdown("### FTE Summary")
         total_calendar_days = sum(v for k, v in shift_days.items() if k != "Addiction") + shift_days.get("Addiction", 0)
         other_dept_fte_total = result.addiction_fte + other_dept_fte
+        time_pct = f"{result.time_fraction * 100:.0f}%" if result.time_fraction < 1.0 else "100%"
         st.markdown(f"""
 | Metric | Value |
 |--------|-------|
 | Status FTE | {status_fte:.2f} |
+| Time Fraction | {time_pct} |
 | Hospitalist FTE | {result.hospitalist_fte:.2f} |
 | Other Dept FTE | {other_dept_fte_total:.2f} |
 | Clinical FTE | {result.clinical_fte:.2f} |
