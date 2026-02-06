@@ -434,8 +434,7 @@ Addiction Board Bonus: $20,000
     # Validation warning if shifts exceed FTE capacity
     total_entered_shifts = other_shifts + shift_days.get("Addiction", 0)
     if other_shifts > target_shift_eq:
-        excess_shifts = int(other_shifts - target_shift_eq + 0.5)
-        st.warning(f"⚠️ Shifts exceed FTE capacity by {excess_shifts} shift equivalents. Reduce shifts or increase Hospitalist FTE.")
+        st.warning(f"⚠️ Shifts exceed FTE capacity. Maximum: {target_shift_eq} shift equivalents.")
 
 # =============================================================================
 # RESULTS
@@ -458,8 +457,7 @@ with col_results:
     shifts_over_capacity = other_shifts > target_shift_eq
 
     if shifts_over_capacity:
-        excess = int(other_shifts - target_shift_eq + 0.5)
-        st.error(f"**Shifts exceed FTE capacity by {excess} shift equivalents.** Compensation below is inflated — reduce shifts or increase Hospitalist FTE.")
+        st.error(f"**Shifts exceed FTE capacity.** Maximum for this FTE: **{target_shift_eq} shift equivalents.** Compensation below is inflated.")
 
     left_col, right_col = st.columns([1, 1])
 
@@ -472,10 +470,13 @@ with col_results:
 
         m1, m2 = st.columns(2)
         m1.metric("A Component", f"${result.a_fte_adjusted:,.0f}")
-        if shifts_over_capacity:
-            m2.markdown(f'**B Component**\n\n<span style="color: #dc3545; font-size: 1.5rem; font-weight: 700;">${result.b_fte_adjusted:,.0f}</span>', unsafe_allow_html=True)
-        else:
-            m2.metric("B Component", f"${result.b_fte_adjusted:,.0f}")
+        b_color = "#dc3545" if shifts_over_capacity else "inherit"
+        m2.markdown(f"""
+        <div>
+            <label style="font-size: 0.875rem; color: rgba(49,51,63,0.6); font-weight: 400;">B Component</label>
+            <div style="font-size: 2.25rem; font-weight: 700; color: {b_color};">${result.b_fte_adjusted:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         if result.other_dept_comp > 0 or result.addiction_board_bonus > 0:
             m1, m2 = st.columns(2)
