@@ -241,6 +241,13 @@ st.markdown("""
         line-height: 1.2;
         margin: 0.5rem 0;
     }
+    .big-number-warning {
+        font-size: 4rem;
+        font-weight: 700;
+        color: #dc3545;
+        line-height: 1.2;
+        margin: 0.5rem 0;
+    }
     .row-label {
         padding-top: 8px;
         font-weight: 500;
@@ -448,15 +455,27 @@ with col_results:
         other_stipend=other_stipend,
     )
 
+    shifts_over_capacity = other_shifts > target_shift_eq
+
+    if shifts_over_capacity:
+        excess = int(other_shifts - target_shift_eq + 0.5)
+        st.error(f"**Shifts exceed FTE capacity by {excess} shift equivalents.** Compensation below is inflated — reduce shifts or increase Hospitalist FTE.")
+
     left_col, right_col = st.columns([1, 1])
 
     with left_col:
         st.markdown("### Total Compensation")
-        st.markdown(f'<div class="big-number">${result.total_compensation:,.0f}</div>', unsafe_allow_html=True)
+        if shifts_over_capacity:
+            st.markdown(f'<div class="big-number-warning">${result.total_compensation:,.0f}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="big-number">${result.total_compensation:,.0f}</div>', unsafe_allow_html=True)
 
         m1, m2 = st.columns(2)
         m1.metric("A Component", f"${result.a_fte_adjusted:,.0f}")
-        m2.metric("B Component", f"${result.b_fte_adjusted:,.0f}")
+        if shifts_over_capacity:
+            m2.markdown(f'**B Component**\n\n<span style="color: #dc3545; font-size: 1.5rem; font-weight: 700;">${result.b_fte_adjusted:,.0f}</span>', unsafe_allow_html=True)
+        else:
+            m2.metric("B Component", f"${result.b_fte_adjusted:,.0f}")
 
         if result.other_dept_comp > 0 or result.addiction_board_bonus > 0:
             m1, m2 = st.columns(2)
@@ -510,13 +529,22 @@ with col_results:
         breakdown_md += f"| **Total** | **{total_days}** | **{int(total_shift_eq + 0.5)}** | **{result.total_sos_value:.2f}** |"
         st.markdown(breakdown_md)
 
-    st.markdown(f"""
+    if shifts_over_capacity:
+        st.markdown(f"""
+- **SoS Multiplier:** <span style="color: #dc3545; font-weight: bold;">{result.sos_multiplier:.4f} (inflated)</span>
+- **SoS Base:** ${result.b_base:,}
+- **SoS Adjusted:** <span style="color: #dc3545;">${result.b_adjusted:,.0f}</span>
+- **Experience:** {result.experience_years} years (+${result.experience_adjustment:,})
+- **B FTE Adjusted:** <span style="color: #dc3545; font-weight: bold;">${result.b_fte_adjusted:,.0f}</span>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
 - **SoS Multiplier:** {result.sos_multiplier:.4f}
 - **SoS Base:** ${result.b_base:,}
 - **SoS Adjusted:** ${result.b_adjusted:,.0f}
 - **Experience:** {result.experience_years} years (+${result.experience_adjustment:,})
 - **B FTE Adjusted:** ${result.b_fte_adjusted:,.0f}
-    """)
+        """)
 
     if result.other_dept_comp > 0 or result.addiction_board_bonus > 0:
         st.markdown("---")
