@@ -464,19 +464,13 @@ with col_results:
     with left_col:
         st.markdown("### Total Compensation")
         if shifts_over_capacity:
-            st.markdown(f'<div class="big-number-warning">${result.total_compensation:,.0f}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="big-number-warning">ERROR</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="big-number">${result.total_compensation:,.0f}</div>', unsafe_allow_html=True)
 
         m1, m2 = st.columns(2)
         m1.metric("A Component", f"${result.a_fte_adjusted:,.0f}")
-        b_color = "#dc3545" if shifts_over_capacity else "inherit"
-        m2.markdown(f"""
-        <div>
-            <label style="font-size: 0.875rem; color: rgba(49,51,63,0.6); font-weight: 400;">B Component</label>
-            <div style="font-size: 2.25rem; font-weight: 700; color: {b_color};">${result.b_fte_adjusted:,.0f}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        m2.metric("B Component", f"${result.b_fte_adjusted:,.0f}")
 
         if result.other_dept_comp > 0 or result.addiction_board_bonus > 0:
             m1, m2 = st.columns(2)
