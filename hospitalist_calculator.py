@@ -381,23 +381,73 @@ Addiction Board Bonus: $20,000
     c1.markdown('<p class="row-label">Women & Families</p>', unsafe_allow_html=True)
     shift_days["Women & Families Days"] = c2.number_input("W&F", min_value=0, max_value=365, value=0, label_visibility="collapsed")
 
+    # Calculate preliminary target_shift_eq for max nights calculation
+    # (using session state for shifts that come after nights in the UI)
+    temp_addiction_fte = st.session_state.get('addiction_days', 0) / BASE_SHIFT_EQUIVALENTS
+    temp_actual_hm_fte = max(0, status_fte - non_clinical_fte - other_dept_fte - temp_addiction_fte)
+
+    # Calculate time fraction
+    if start_date <= FISCAL_YEAR_START:
+        temp_days_in_fy = TOTAL_FY_DAYS
+    elif start_date > FISCAL_YEAR_END:
+        temp_days_in_fy = 0
+    else:
+        temp_days_in_fy = (FISCAL_YEAR_END - start_date).days + 1
+    temp_effective_days = max(0, temp_days_in_fy - leave_days)
+    temp_time_fraction = temp_effective_days / TOTAL_FY_DAYS
+
+    temp_target_shift_eq = int(temp_actual_hm_fte * BASE_SHIFT_EQUIVALENTS * temp_time_fraction + 0.5)
+
+    # Store shift values we'll need later
+    temp_episcopal = st.session_state.get('episcopal_days', 0)
+    temp_clinic = st.session_state.get('clinic_days', 0)
+
+    # Initialize session state for nights if not exists
+    if 'nights_input' not in st.session_state:
+        st.session_state.nights_input = 28
+
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Nights</p>', unsafe_allow_html=True)
-    shift_days["Nights"] = c2.number_input("Nights", min_value=0, max_value=365, value=28, label_visibility="collapsed")
+
+    # Calculate current direct care days BEFORE rendering button
+    # Use the session state value directly
+    temp_nights = st.session_state.nights_input
+    current_other_shifts = (
+        shift_days["Teaching"] * SHIFT_TYPES["Teaching"]["ratio"] +
+        shift_days["Women & Families Days"] * SHIFT_TYPES["Women & Families Days"]["ratio"] +
+        temp_nights +
+        temp_episcopal * SHIFT_TYPES["Episcopal"]["ratio"] +
+        temp_clinic * SHIFT_TYPES["Clinic"]["ratio"]
+    )
+    current_direct_care = max(0, int(temp_target_shift_eq - current_other_shifts))
+
+    # Split the input column to fit input + button
+    input_col, button_col = c2.columns([0.7, 0.3])
+
+    # Check if Max button was clicked BEFORE rendering input
+    if button_col.button("Max", key="max_nights_btn", use_container_width=True):
+        # Set nights to include all direct care days
+        st.session_state.nights_input = temp_nights + current_direct_care
+        st.rerun()
+
+    shift_days["Nights"] = input_col.number_input("Nights", min_value=0, max_value=365, value=st.session_state.nights_input, key="nights_input", label_visibility="collapsed")
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Episcopal</p>', unsafe_allow_html=True)
     shift_days["Episcopal"] = c2.number_input("Episcopal", min_value=0, max_value=365, value=0, label_visibility="collapsed")
+    st.session_state.episcopal_days = shift_days["Episcopal"]
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Clinic</p>', unsafe_allow_html=True)
     clinic_options = {f"{w} week{'s' if w != 1 else ''} ({w * 5} days)": w * 5 for w in range(0, 53)}
     clinic_selection = c2.selectbox("Clinic", options=list(clinic_options.keys()), index=0, label_visibility="collapsed")
     shift_days["Clinic"] = clinic_options[clinic_selection]
+    st.session_state.clinic_days = shift_days["Clinic"]
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
     c1.markdown('<p class="row-label">Addiction Medicine</p>', unsafe_allow_html=True)
     shift_days["Addiction"] = c2.number_input("Addiction", min_value=0, max_value=365, value=0, label_visibility="collapsed")
+    st.session_state.addiction_days = shift_days["Addiction"]
 
     # Calculate Addiction FTE for display
     addiction_fte_calc = shift_days["Addiction"] / BASE_SHIFT_EQUIVALENTS
@@ -472,6 +522,31 @@ with col_results:
         m1.metric("A Component", f"${result.a_fte_adjusted:,.0f}")
         m2.metric("B Component", f"${result.b_fte_adjusted:,.0f}")
 
+        st.markdown("#### A Component")
+        st.markdown(f"""
+- **Rank:** {academic_rank}
+- **Base A:** ${result.a_component:,}
+- **FTE Adjusted:** ${result.a_fte_adjusted:,.0f}
+        """)
+
+        st.markdown("#### B Component")
+        if shifts_over_capacity:
+            st.markdown(f"""
+- **SoS Multiplier:** <span style="color: #dc3545; font-weight: bold;">{result.sos_multiplier:.4f} (inflated)</span>
+- **SoS Base:** ${result.b_base:,}
+- **SoS Adjusted:** <span style="color: #dc3545;">${result.b_adjusted:,.0f}</span>
+- **Experience:** {result.experience_years} years (+${result.experience_adjustment:,})
+- **B FTE Adjusted:** <span style="color: #dc3545; font-weight: bold;">${result.b_fte_adjusted:,.0f}</span>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+- **SoS Multiplier:** {result.sos_multiplier:.4f}
+- **SoS Base:** ${result.b_base:,}
+- **SoS Adjusted:** ${result.b_adjusted:,.0f}
+- **Experience:** {result.experience_years} years (+${result.experience_adjustment:,})
+- **B FTE Adjusted:** ${result.b_fte_adjusted:,.0f}
+            """)
+
         if result.other_dept_comp > 0 or result.addiction_board_bonus > 0:
             m1, m2 = st.columns(2)
             if result.other_dept_comp > 0:
@@ -501,16 +576,7 @@ with col_results:
 
     st.markdown("---")
 
-    st.markdown("### A Component (Base Salary)")
-    st.markdown(f"""
-- **Rank:** {academic_rank}
-- **Base A:** ${result.a_component:,}
-- **FTE Adjusted:** ${result.a_fte_adjusted:,.0f}
-    """)
-
-    st.markdown("---")
-
-    st.markdown("### B Component (Strength of Schedule)")
+    st.markdown("### Shift Breakdown")
 
     if result.shift_breakdown:
         breakdown_md = "| Shift Type | Days | Shift Eq | SoS Value |\n|------------|------|----------|----------|\n"
@@ -523,23 +589,6 @@ with col_results:
                 total_shift_eq += data["shift_eq"]
         breakdown_md += f"| **Total** | **{total_days}** | **{int(total_shift_eq + 0.5)}** | **{result.total_sos_value:.2f}** |"
         st.markdown(breakdown_md)
-
-    if shifts_over_capacity:
-        st.markdown(f"""
-- **SoS Multiplier:** <span style="color: #dc3545; font-weight: bold;">{result.sos_multiplier:.4f} (inflated)</span>
-- **SoS Base:** ${result.b_base:,}
-- **SoS Adjusted:** <span style="color: #dc3545;">${result.b_adjusted:,.0f}</span>
-- **Experience:** {result.experience_years} years (+${result.experience_adjustment:,})
-- **B FTE Adjusted:** <span style="color: #dc3545; font-weight: bold;">${result.b_fte_adjusted:,.0f}</span>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-- **SoS Multiplier:** {result.sos_multiplier:.4f}
-- **SoS Base:** ${result.b_base:,}
-- **SoS Adjusted:** ${result.b_adjusted:,.0f}
-- **Experience:** {result.experience_years} years (+${result.experience_adjustment:,})
-- **B FTE Adjusted:** ${result.b_fte_adjusted:,.0f}
-        """)
 
     if result.other_dept_comp > 0 or result.addiction_board_bonus > 0:
         st.markdown("---")
