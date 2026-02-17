@@ -95,8 +95,13 @@ def calculate_compensation(
         days_in_fy = 0
     else:
         days_in_fy = (FISCAL_YEAR_END - start_date).days + 1
+
+    # Salary time fraction: only reduced by late start, NOT by leave (FMLA is paid)
+    time_fraction = days_in_fy / TOTAL_FY_DAYS
+
+    # Shift time fraction: reduced by both late start AND leave (fewer shifts to schedule)
     effective_days = max(0, days_in_fy - leave_days)
-    time_fraction = effective_days / TOTAL_FY_DAYS
+    shift_time_fraction = effective_days / TOTAL_FY_DAYS
 
     # Calculate Addiction FTE from shifts
     addiction_shifts = shift_days.get("Addiction", 0)
@@ -108,7 +113,7 @@ def calculate_compensation(
     # Actual HM FTE (for shifts) = Status - NonClinical - Other - Addiction
     actual_hm_fte = max(0, status_fte - non_clinical_fte - other_dept_fte - addiction_fte)
     hospitalist_fte = actual_hm_fte
-    clinical_fte = actual_hm_fte * time_fraction
+    clinical_fte = actual_hm_fte * shift_time_fraction
     # Round shift equivalents to integer using Excel-style round-half-up
     # (Python's round() uses banker's rounding which rounds 0.5 to even)
     shift_equivalents = int(clinical_fte * BASE_SHIFT_EQUIVALENTS + 0.5)
@@ -306,8 +311,8 @@ with col_input:
         start_date = c2.date_input("Start Date", value=date(2026, 8, 1), min_value=date(2026, 7, 2), max_value=FISCAL_YEAR_END, format="MM/DD/YYYY", label_visibility="collapsed")
 
     _, c1, c2, _ = st.columns([0.3, 1.2, 1, 0.3])
-    c1.markdown('<p class="row-label">Leave Days</p>', unsafe_allow_html=True)
-    leave_days = c2.number_input("Leave Days", min_value=0, max_value=365, value=0, label_visibility="collapsed")
+    c1.markdown('<p class="row-label">FMLA / Leave Days</p>', unsafe_allow_html=True)
+    leave_days = c2.number_input("FMLA / Leave Days", min_value=0, max_value=365, value=0, label_visibility="collapsed")
 
     st.markdown("### FTE Allocation")
 
