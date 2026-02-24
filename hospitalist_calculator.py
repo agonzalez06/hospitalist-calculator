@@ -48,6 +48,32 @@ NIGHT_STANDARD_SOS = 1.5
 NIGHT_PREMIUM_SOS = 1.75
 
 
+def _compute_time_fractions(start_date, leave_days):
+    """Compute salary and shift time fractions.
+
+    Uses month-based calculation for 1st-of-month starts to match Excel.
+    Falls back to day-based for mid-month starts.
+    """
+    if start_date <= FISCAL_YEAR_START:
+        time_fraction = 1.0
+    elif start_date > FISCAL_YEAR_END:
+        time_fraction = 0.0
+    elif start_date.day == 1:
+        # First of month: count complete months remaining in FY
+        fy_months = (FISCAL_YEAR_END.year - start_date.year) * 12 + (FISCAL_YEAR_END.month - start_date.month) + 1
+        time_fraction = fy_months / 12
+    else:
+        # Mid-month: fall back to day-based
+        days_in_fy = (FISCAL_YEAR_END - start_date).days + 1
+        time_fraction = days_in_fy / TOTAL_FY_DAYS
+
+    # Shift time fraction: reduced by leave days (fewer shifts to schedule)
+    leave_fraction = leave_days / TOTAL_FY_DAYS if leave_days > 0 else 0
+    shift_time_fraction = max(0.0, time_fraction - leave_fraction)
+
+    return time_fraction, shift_time_fraction
+
+
 @dataclass
 class CalculationResult:
     """Holds all calculated compensation values"""
@@ -88,20 +114,8 @@ def calculate_compensation(
 ) -> CalculationResult:
     """Calculate hospitalist compensation based on A+B model."""
 
-    # Time fraction
-    if start_date <= FISCAL_YEAR_START:
-        days_in_fy = TOTAL_FY_DAYS
-    elif start_date > FISCAL_YEAR_END:
-        days_in_fy = 0
-    else:
-        days_in_fy = (FISCAL_YEAR_END - start_date).days + 1
-
-    # Salary time fraction: only reduced by late start, NOT by leave (FMLA is paid)
-    time_fraction = days_in_fy / TOTAL_FY_DAYS
-
-    # Shift time fraction: reduced by both late start AND leave (fewer shifts to schedule)
-    effective_days = max(0, days_in_fy - leave_days)
-    shift_time_fraction = effective_days / TOTAL_FY_DAYS
+    # Time fraction (month-based for 1st-of-month starts to match Excel)
+    time_fraction, shift_time_fraction = _compute_time_fractions(start_date, leave_days)
 
     # Calculate Addiction FTE from shifts
     addiction_shifts = shift_days.get("Addiction", 0)
@@ -176,13 +190,11 @@ def calculate_compensation(
     experience_adjustment = experience_years * EXPERIENCE_ADJUSTMENT_PER_YEAR
 
     # B formula: (SoS_Base × SOS + Experience) × HM_FTE - 105000 × Status_FTE
+    # Shifts are already prorated for partial year via shift_equivalents,
+    # so B is not further reduced by time_fraction (matches Excel model)
     b_with_experience = b_adjusted + experience_adjustment
     b_full = b_with_experience * hm_fte - A_BASE_FOR_B_CALC * status_fte
-
-    # For partial year: B absorbs the time reduction so total is prorated while A stays constant
-    # B_adjusted = B_full × time_fraction - A × (1 - time_fraction)
-    # This ensures: A + B_adjusted = (A + B_full) × time_fraction
-    b_fte_adjusted = round((b_full * time_fraction - a_fte_adjusted * (1 - time_fraction)) / 100) * 100
+    b_fte_adjusted = round(b_full / 100) * 100
 
     # Other Dept Comp: Full $240k rate - the negative B offsets A to get correct total
     # For 100% other dept: A=$105k + B=-$105k + Other=$240k = $240k total
@@ -391,15 +403,8 @@ Addiction Board Bonus: $20,000
     temp_addiction_fte = st.session_state.get('addiction_days', 0) / BASE_SHIFT_EQUIVALENTS
     temp_actual_hm_fte = max(0, status_fte - non_clinical_fte - other_dept_fte - temp_addiction_fte)
 
-    # Calculate time fraction
-    if start_date <= FISCAL_YEAR_START:
-        temp_days_in_fy = TOTAL_FY_DAYS
-    elif start_date > FISCAL_YEAR_END:
-        temp_days_in_fy = 0
-    else:
-        temp_days_in_fy = (FISCAL_YEAR_END - start_date).days + 1
-    temp_effective_days = max(0, temp_days_in_fy - leave_days)
-    temp_time_fraction = temp_effective_days / TOTAL_FY_DAYS
+    # Calculate time fraction (reuse shared helper)
+    _, temp_time_fraction = _compute_time_fractions(start_date, leave_days)
 
     temp_target_shift_eq = int(temp_actual_hm_fte * BASE_SHIFT_EQUIVALENTS * temp_time_fraction + 0.5)
 
@@ -457,15 +462,8 @@ Addiction Board Bonus: $20,000
     # Calculate Addiction FTE for display
     addiction_fte_calc = shift_days["Addiction"] / BASE_SHIFT_EQUIVALENTS
 
-    # Calculate time fraction for UI (same logic as in calculate_compensation)
-    if start_date <= FISCAL_YEAR_START:
-        ui_days_in_fy = TOTAL_FY_DAYS
-    elif start_date > FISCAL_YEAR_END:
-        ui_days_in_fy = 0
-    else:
-        ui_days_in_fy = (FISCAL_YEAR_END - start_date).days + 1
-    ui_effective_days = max(0, ui_days_in_fy - leave_days)
-    ui_time_fraction = ui_effective_days / TOTAL_FY_DAYS
+    # Calculate time fraction for UI (reuse shared helper)
+    _, ui_time_fraction = _compute_time_fractions(start_date, leave_days)
 
     # Calculate Direct Care Days (prorated by time fraction)
     actual_hm_fte = max(0, status_fte - non_clinical_fte - other_dept_fte - addiction_fte_calc)
