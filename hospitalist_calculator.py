@@ -34,6 +34,22 @@ A_COMPONENT_BY_RANK = {
     "TFP NFP Physician": 105000,
 }
 
+# Non-faculty (TFP NFP Physician) A base is tiered by years of experience and
+# capped at the Associate level (never Professor), to match the Staffing sheet:
+#   <= 6 yrs  -> Assistant base ($105,000)
+#   >  6 yrs  -> Associate base ($120,750)  [cap]
+NON_FACULTY_RANK = "TFP NFP Physician"
+NON_FACULTY_EXPERIENCE_THRESHOLD = 6
+NON_FACULTY_ASSISTANT_BASE = 105000
+NON_FACULTY_ASSOCIATE_BASE = 120750
+
+
+def non_faculty_a_base(experience_years: int) -> int:
+    """A base for non-faculty: tiered by experience, capped at Associate."""
+    if experience_years > NON_FACULTY_EXPERIENCE_THRESHOLD:
+        return NON_FACULTY_ASSOCIATE_BASE
+    return NON_FACULTY_ASSISTANT_BASE
+
 SHIFT_TYPES = {
     "Teaching": {"ratio": 1.0, "sos": 1.0},
     "Direct Care Days": {"ratio": 1.0, "sos": 1.25},
@@ -176,18 +192,22 @@ def calculate_compensation(
     # SoS multiplier
     sos_multiplier = total_sos_value / shift_equivalents if shift_equivalents > 0 else 1.0
 
+    current_year = FISCAL_YEAR_START.year
+    experience_years = max(0, current_year - graduation_year)
+    experience_adjustment = experience_years * EXPERIENCE_ADJUSTMENT_PER_YEAR
+
     # A Component - based on Status FTE only (not prorated by time)
-    # A is the base salary tied to your appointment, not reduced for late start/leave
-    a_component = A_COMPONENT_BY_RANK.get(academic_rank, 105000)
+    # A is the base salary tied to your appointment, not reduced for late start/leave.
+    # Non-faculty are tiered by experience and capped at the Associate base.
+    if academic_rank == NON_FACULTY_RANK:
+        a_component = non_faculty_a_base(experience_years)
+    else:
+        a_component = A_COMPONENT_BY_RANK.get(academic_rank, 105000)
     a_fte_adjusted = a_component * status_fte
 
     # B Component
     b_base = STRENGTH_OF_SCHEDULE_BASE
     b_adjusted = b_base * sos_multiplier
-
-    current_year = FISCAL_YEAR_START.year
-    experience_years = max(0, current_year - graduation_year)
-    experience_adjustment = experience_years * EXPERIENCE_ADJUSTMENT_PER_YEAR
 
     # B formula: (SoS_Base × SOS + Experience) × HM_FTE - 105000 × Status_FTE
     # Shifts are already prorated for partial year via shift_equivalents,
