@@ -55,7 +55,7 @@ SHIFT_TYPES = {
     "Direct Care Days": {"ratio": 1.0, "sos": 1.25},
     "Women & Families Days": {"ratio": 1.2, "sos": 1.25},
     "Episcopal": {"ratio": 0.75, "sos": 1.05},
-    "Clinic": {"ratio": 0.9, "sos": 1.125},
+    "Clinic": {"ratio": 0.9, "sos": 1.25},
     "Addiction": {"ratio": 1.0, "sos": 1.0},
 }
 
@@ -394,7 +394,7 @@ Women & Families            1.2        1.25
 Standard Nights (first 21)  1.0        1.5         Night premium
 Premium Nights (after 21)   1.0        1.75        Extra night premium
 Episcopal                   0.75       1.05
-Clinic                      0.9        1.125       Outpatient
+Clinic                      0.9        1.25        Outpatient
 Addiction                   1.0        --          Separate compensation
 
 1.0 FTE = 183 shift equivalents/year
